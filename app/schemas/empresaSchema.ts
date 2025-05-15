@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const empresaSchema = new mongoose.Schema({
-    nome: {
+    nomeEmpresa: {
         type: String,
         required: true,
     },
@@ -12,7 +12,7 @@ const empresaSchema = new mongoose.Schema({
     },
     emailEmpresa:{
         type: String,
-        unique: true,
+        unique: true,       
     },
     telefoneEmpresa:{
         type: String,

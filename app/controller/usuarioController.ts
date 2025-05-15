@@ -1,5 +1,4 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import app from "..";
 import usuarioSchema from "../schemas/usuarioSchema";
 import { criarUsuarioModel } from "../models/criarUsuario";
 import { unknown } from "zod";
