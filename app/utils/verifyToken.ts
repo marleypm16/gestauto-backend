@@ -1,4 +1,3 @@
-import { get } from "http";
 import { redisClient } from "../plugin/redis";
 
 const verifyToken = async (token: string): Promise<boolean> => {
