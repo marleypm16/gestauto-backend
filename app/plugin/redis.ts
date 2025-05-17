@@ -1,6 +1,5 @@
 
 import {createClient} from 'redis';
-import app from '..';
 
 
 export const redisClient = createClient({
