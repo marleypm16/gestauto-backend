@@ -1,4 +1,3 @@
-import { Document } from "mongoose";
 import usuarioSchema from "../schemas/usuarioSchema";
 import bcrypt from "bcryptjs";
 export const findUserAuth = async (email:string,senha:string) => { 
