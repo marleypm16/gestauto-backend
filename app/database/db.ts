@@ -1,12 +1,14 @@
 import mongoose from 'mongoose';
 
 const connectDB = async () => {
-    await mongoose.connect('mongodb+srv://gestauto:gestautoadmin123@gestauto.wypz9yd.mongodb.net/?retryWrites=true&w=majority&appName=GestAuto').then((
+    await mongoose.connect(
+        process.env.DB_URL || 'mongodb://localhost:27017/mydatabase',
+    ).then((
         () => {
-            console.log('MongoDB connected');
+            console.log('Banco de dados conectado com sucesso');
         }
     )).catch((error) => {
-        console.error('MongoDB connection error:', error);
+        console.error('Erro ao conectar com banco de dados:', error);
         process.exit(1); 
     });
   
