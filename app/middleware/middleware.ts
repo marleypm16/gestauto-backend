@@ -1,23 +1,28 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { redisClient } from "../plugin/redis";
+import verifyToken from "../utils/verifyToken";
 
-async function authMiddleware(request:FastifyRequest, reply:FastifyReply) {
-  try {
+const authMiddleware = async (request:FastifyRequest, reply:FastifyReply) => {
+  
     const authHeader = request.headers.authorization;
     if (!authHeader) return reply.code(401).send({ error: 'Token ausente' });
 
     const token = authHeader.split(' ')[1];
     const decoded = await request.jwtVerify();
 
-    const isBlacklisted = await redisClient.get(`blacklist:${token}`);
-    if (isBlacklisted) {
-      return reply.code(401).send({ error: 'Token expirado ou inválido' });
-    }
+    verifyToken(token).then(() => {
+        return reply.code(401).send({ error: 'Token expirado ou inválido' });
 
+    }).catch((error) => {
+        console.error('Erro ao verificar token no Redis:', error);
+        return reply.code(500).send({ error: 'Erro interno do servidor' });
+    })
+    ;
+
+  
+    
     request.user = decoded;
-  } catch (err) {
     reply.code(401).send({ error: 'Token inválido' });
-  }
+  
 }
 
 export default authMiddleware;
