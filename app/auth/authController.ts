@@ -6,14 +6,13 @@ import { criarUsuarioModel } from "../models/criarUsuario";
 import usuarioSchema from "../schemas/usuarioSchema";
 import { unknown } from "zod";
 import bcrypt from "bcryptjs";
+import { error } from "console";
 
 export class AuthController {
   static async login(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const loginData = loginModel.parse(request.body);
-      const { email, senha } = loginData;
+      const {email,senha} = loginModel.parse(request.body);
 
-      // Verificar usuário e credenciais
+      // Busca o usuário no banco de dados
       const user = await findUserAuth(email, senha);
       
       if (!user) {
@@ -27,7 +26,10 @@ export class AuthController {
       });
 
       // Armazenar sessão no Redis
-      await redisClient.set(`user:${user.id}`, token, { EX: 3600 });
+      await redisClient.set(`user:${user.id}`, token, { EX: 3600 }).catch((error) => {
+        console.error('Erro ao armazenar sessão no Redis:', error);
+        return reply.status(500).send({ message: 'Erro interno do servidor' });
+      });
 
       // Retornar token para o cliente
       return reply.status(200).send({ 
@@ -36,49 +38,44 @@ export class AuthController {
         user: {
           id: user.id,
           email: user.email
-          // outros dados não sensíveis
         }
       });
-
-    } catch (error) {
-      console.error('Erro no login:', error);
-      return reply.status(500).send({ message: 'Erro interno no servidor' });
-    }
   }
 
   static async logout(request: FastifyRequest, reply: FastifyReply) {
-    try {
-        const loginData = loginModel.parse(request.body);
-        const { email } = loginData;
+    
+        const {email} = loginModel.parse(request.body);
 
         // Remove o usuário do Redis
-        await redisClient.del(email);
+        await redisClient.del(email).then(()=>{
+          console.log('Sessão removida do Redis com sucesso');
+          return reply.status(200).send({ message: 'Logout bem-sucedido' });
 
-        return reply.status(200).send({ message: 'Logout bem-sucedido' });
+        }).catch((error) => {
+          console.error('Erro ao remover sessão do Redis:', error);}
+        )
 
-    } catch (error) {
-      console.error('Erro no logout:', error);
-      return reply.status(401).send({ message: 'Não autorizado ou token inválido' });
-    }
+
+     
+    
   }
 
   static async register(req: FastifyRequest, res: FastifyReply) {
-     const user = criarUsuarioModel.parse(req.body);
-    try{
-        const senhaCriptografada = await bcrypt.hash(user.senha, 10);
+        const user = criarUsuarioModel.parse(req.body);
+        const senhaCriptografada = await bcrypt.hash(user.senha, 12);
         await usuarioSchema.create({
             ...user,
             senha: senhaCriptografada
+        }).then(()=>{
+            console.log('Usuário criado com sucesso');
+            res.status(201).send({ message: "Usuário criado com sucesso!" });
+
+        }).catch((error) =>{
+            console.error('Erro ao criar usuário:', error);
+            return res.status(500).send({ message: 'Erro interno do servidor' });
         })
-       res.status(201).send({ message: "Usuário criado com sucesso!" });
-    }
-    catch (error: Error | unknown) {
-        if(error instanceof Error){
-            return res.status(500).send(error.message);
-        }
-        if(unknown instanceof unknown){
-            return res.status(500).send("Erro desconhecido");
-        }
-    }
+    
+       
+    
   }
 }
