@@ -1,12 +1,10 @@
-import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { FastifyReply, FastifyRequest } from "fastify";
 import { loginModel } from "../models/loginModel";
 import { redisClient } from "../plugin/redis";
 import { findUserAuth } from "../utils/findUserAuth";
 import { criarUsuarioModel } from "../models/criarUsuario";
 import usuarioSchema from "../schemas/usuarioSchema";
-import { unknown } from "zod";
 import bcrypt from "bcryptjs";
-import { error } from "console";
 
 export class AuthController {
   static async login(request: FastifyRequest, reply: FastifyReply) {
@@ -23,6 +21,7 @@ export class AuthController {
       const token = request.server.jwt.sign({ 
         id: user.id, 
         email: user.email,
+        nome: user.nomeCompleto,
       });
 
       // Armazenar sessão no Redis
@@ -43,11 +42,13 @@ export class AuthController {
   }
 
   static async logout(request: FastifyRequest, reply: FastifyReply) {
-    
-        const {email} = loginModel.parse(request.body);
+      const authHeader = request.headers.authorization;
+      if (!authHeader) {
+        return reply.status(401).send({ message: 'Token não fornecido' });
+      }    
+      const token = authHeader.split(' ')[1];
 
-        // Remove o usuário do Redis
-        await redisClient.del(email).then(()=>{
+        await redisClient.set(`blacklist:${token}`, token,{EX: 120 }).then(()=>{
           console.log('Sessão removida do Redis com sucesso');
           return reply.status(200).send({ message: 'Logout bem-sucedido' });
 
