@@ -5,6 +5,7 @@ import { findUserAuth } from "../utils/findUserAuth";
 import { criarUsuarioModel } from "../models/criarUsuario";
 import usuarioSchema from "../schemas/usuarioSchema";
 import bcrypt from "bcryptjs";
+import { storeToken, storeTokenBlackList } from "../utils/redisFunctions";
 
 export class AuthController {
   static async login(request: FastifyRequest, reply: FastifyReply) {
@@ -25,11 +26,9 @@ export class AuthController {
       });
 
       // Armazenar sessão no Redis
-      await redisClient.set(`user:${user.id}`, token, { EX: 3600 }).catch((error) => {
-        console.error('Erro ao armazenar sessão no Redis:', error);
-        return reply.status(500).send({ message: 'Erro interno do servidor' });
-      });
-
+      await storeToken(token).catch(() => {
+        return reply.status(500).send({ message: 'Erro Interno do servidor' });
+      })
       // Retornar token para o cliente
       return reply.status(200).send({ 
         message: 'Login bem-sucedido',
@@ -48,13 +47,9 @@ export class AuthController {
       }    
       const token = authHeader.split(' ')[1];
 
-        await redisClient.set(`blacklist:${token}`, token,{EX: 120 }).then(()=>{
-          console.log('Sessão removida do Redis com sucesso');
-          return reply.status(200).send({ message: 'Logout bem-sucedido' });
+      await storeTokenBlackList(token)
 
-        }).catch((error) => {
-          console.error('Erro ao remover sessão do Redis:', error);}
-        )
+      return reply.status(200).send({ message: 'Logout bem-sucedido' });
 
 
      
