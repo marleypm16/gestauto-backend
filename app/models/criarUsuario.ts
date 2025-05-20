@@ -6,8 +6,5 @@ export const criarUsuarioModel = z.object({
     senha: z.string().min(8,{message:"A senha deve ter no mínimo 8 caracteres"}).regex(/[a-zA-Z]/, 'A senha deve conter pelo menos uma letra')
     .regex(/[0-9]/, 'A senha deve conter pelo menos um número')
     .regex(/[^a-zA-Z0-9]/, 'A senha deve conter pelo menos um caractere especial'),
-    confirmarSenha: z.string().min(1,{message:"Confirmação de senha é obrigatória"}),
     empresaId: z.string().min(1,{message:"ID da empresa é obrigatório"})
-}).refine((data) => data.senha === data.confirmarSenha, {
-    message: "As senhas não coincidem",
 })
