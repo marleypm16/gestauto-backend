@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 export class NovaSenhaService{
     async criarNovaSenha(email:string,novaSenha:string,otp:string){
         //validar se o otp existe no redis
-        const resultado = await redisClient.get(`otp:${otp}`)
+        const resultado = await redisClient.get(`otp:${email}`)
         
         if(!resultado){
             console.log("OTP Inválida")
@@ -17,6 +17,12 @@ export class NovaSenhaService{
         if (!usuario) {
             throw new Error("Usuário não encontrado");
         }
+        //validar se a otp é do email enviado
+        if(otp!==resultado){
+            throw new Error("OTP incorreta");
+        }
+
+
         //validar se a senha atual é igual a nova senha
 
         if(bcrypt.compareSync(novaSenha, usuario.senha)){
