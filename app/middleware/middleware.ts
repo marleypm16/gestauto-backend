@@ -9,19 +9,13 @@ const authMiddleware = async (request:FastifyRequest, reply:FastifyReply) => {
     const token = authHeader.split(' ')[1];
     const decoded = await request.jwtVerify();
 
-    verifyToken(token).then(() => {
-        return reply.code(401).send({ error: 'Token expirado ou inválido' });
+    const isValid = await verifyToken(token);
+    if (!isValid) {
+        return reply.code(401).send({ error: 'Token inválido' });
+    }
 
-    }).catch((error) => {
-        console.error('Erro ao verificar token no Redis:', error);
-        return reply.code(500).send({ error: 'Erro interno do servidor' });
-    })
-    ;
-
-  
     
     request.user = decoded;
-    reply.code(401).send({ error: 'Token inválido' });
   
 }
 
