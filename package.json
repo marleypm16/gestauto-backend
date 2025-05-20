@@ -19,6 +19,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.812.0",
     "@fastify/jwt": "^9.1.0",
     "@fastify/redis": "^7.0.2",
     "bcryptjs": "^3.0.2",
