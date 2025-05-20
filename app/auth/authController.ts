@@ -64,6 +64,12 @@ export class AuthController {
   static async register(req: FastifyRequest, res: FastifyReply) {
         const user = criarUsuarioModel.parse(req.body);
         const senhaCriptografada = await bcrypt.hash(user.senha, 12);
+        const existeusuarioComEmail = await usuarioSchema.findOne({email:user.email})
+        if (existeusuarioComEmail) {
+            return res.status(400).send({ message: 'E-mail já cadastrado' });
+        }
+        
+        
         await usuarioSchema.create({
             ...user,
             senha: senhaCriptografada
