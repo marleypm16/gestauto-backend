@@ -2,6 +2,10 @@ import { SESClient,SendEmailCommand } from "@aws-sdk/client-ses";
 
 const sesClient = new SESClient({
     region: process.env.AWS_REGION,
+    credentials:{
+        accessKeyId: process.env.AWS_ACCESS_KEY || "",
+        secretAccessKey: process.env.AWS_SECRET_KEY || "",
+    }
 });
 
 const sendEmailSes = async (to: string,otp:number) => {
@@ -16,11 +20,11 @@ const sendEmailSes = async (to: string,otp:number) => {
                 }
             },
             Subject:{
-                Data:"Verificação de conta"
+                Data:"Recuperação de senha"
             }
         },
 
-        Source: process.env.SES_EMAIL,
+        Source: process.env.AWS_EMAIL,
     
     })
 
