@@ -1,11 +1,11 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { EmailService } from "../services/emailService";
 import generateOtp from "../utils/generateOtp";
-import { verifyEmailSchema } from "../schemas/verifyEmailSchema";
+import { verifyEmailModel } from "../models/verifyEmailModel";
 
 export class EmailController {
     static async sendEmail(req: FastifyRequest, res: FastifyReply): Promise<void> {
-       const {to} = verifyEmailSchema.parse(req.body);
+       const {to} = verifyEmailModel.parse(req.body);
 
         try {
             const otp = generateOtp();
