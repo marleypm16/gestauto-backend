@@ -1,8 +1,9 @@
+import dotenv from "dotenv"
+dotenv.config()
+
 import app from "."
 import connectDB from "./database/db"
 import { connectRedis } from "./plugin/redis"
-import dotenv from 'dotenv'
-dotenv.config()
 const start = async () => {
     await connectDB()
     await connectRedis()
@@ -14,6 +15,8 @@ const start = async () => {
     console.log( `Servidor rodando em ${address}`)
   })
 }
+
+
 
 start()
  
