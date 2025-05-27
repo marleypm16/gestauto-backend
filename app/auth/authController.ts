@@ -70,7 +70,7 @@ export class AuthController {
         }
         
         
-        await usuarioSchema.create({
+        usuarioSchema.create({
             ...user,
             senha: senhaCriptografada
         }).then(()=>{
