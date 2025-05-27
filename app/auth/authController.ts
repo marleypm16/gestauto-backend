@@ -7,6 +7,7 @@ import usuarioSchema from "../schemas/usuarioSchema";
 import bcrypt from "bcryptjs";
 import empresaSchema from "../schemas/empresaSchema";
 import usuarioEmpresaSchema from "../schemas/usuarioEmpresaSchema";
+import { registroModel } from "../models/registroModel";
 
 export class AuthController {
   static async login(request: FastifyRequest, reply: FastifyReply) {
@@ -64,7 +65,7 @@ export class AuthController {
   }
 
   static async register(req: FastifyRequest, res: FastifyReply) {
-        const {user,company} = criarUsuarioModel.parse(req.body);
+        const {user,company} = registroModel.parse(req.body);
         const senhaCriptografada = await bcrypt.hash(user.senha, 12);
         const existeusuarioComEmail = await usuarioSchema.findOne({email:user.email})
         if (existeusuarioComEmail) {
