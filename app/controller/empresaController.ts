@@ -14,8 +14,14 @@ export class EmpresaController {
   static async createEmpresa(req: FastifyRequest, res: FastifyReply) {
     req.body = criarEmpresaModel.parse(req.body);
     try {
-      await empresaSchema.create(req.body);
-      res.status(201).send({ message: "Empresa criada com sucesso!" });
+      const novaEmpresa = await empresaSchema.create(req.body);
+      res.status(201).send(
+        { message: "Empresa criada com sucesso!",
+          idEmpresa: novaEmpresa.id,
+          
+        }
+
+      );
     } catch (error: Error | unknown) {
       if (error instanceof Error) {
         return res.status(500).send(error.message);
