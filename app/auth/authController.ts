@@ -5,6 +5,9 @@ import { findUserAuth } from "../utils/findUserAuth";
 import { criarUsuarioModel } from "../models/criarUsuario";
 import usuarioSchema from "../schemas/usuarioSchema";
 import bcrypt from "bcryptjs";
+import empresaSchema from "../schemas/empresaSchema";
+import usuarioEmpresaSchema from "../schemas/usuarioEmpresaSchema";
+import { registroModel } from "../models/registroModel";
 
 export class AuthController {
   static async login(request: FastifyRequest, reply: FastifyReply) {
@@ -62,24 +65,34 @@ export class AuthController {
   }
 
   static async register(req: FastifyRequest, res: FastifyReply) {
-        const user = criarUsuarioModel.parse(req.body);
+        const {user,company} = registroModel.parse(req.body);
         const senhaCriptografada = await bcrypt.hash(user.senha, 12);
         const existeusuarioComEmail = await usuarioSchema.findOne({email:user.email})
         if (existeusuarioComEmail) {
             return res.status(400).send({ message: 'E-mail já cadastrado' });
         }
+        const existeEmpresaComCnpj = await usuarioSchema.findOne({ 'empresa.cnpj': company.cnpj });
         
-        
-        usuarioSchema.create({
+        if (existeEmpresaComCnpj) {
+            return res.status(400).send({ message: 'CNPJ já cadastrado' });
+        }
+       const empresaCriada = await empresaSchema.create({
+            ...company
+        })
+        if (!empresaCriada) {
+            return res.status(500).send({ message: 'Erro ao criar empresa' });
+        }
+        const usuarioCriado = await usuarioSchema.create({
             ...user,
+            empresaId: empresaCriada._id,
             senha: senhaCriptografada
-        }).then(()=>{
-            console.log('Usuário criado com sucesso');
-            res.status(201).send({ message: "Usuário criado com sucesso!" });
-
-        }).catch((error) =>{
-            console.error('Erro ao criar usuário:', error);
-            return res.status(500).send({ message: 'Erro interno do servidor' });
+        })
+        if (!usuarioCriado) {
+            return res.status(500).send({ message: 'Erro ao criar usuário' });
+        }
+        await usuarioEmpresaSchema.create({
+          usuarioId: usuarioCriado._id,
+          empresaId: empresaCriada._id,
         })
     
        
