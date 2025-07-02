@@ -10,14 +10,12 @@ export class NovaSenhaController{
   }
 
      async criarNovaSenha(req:FastifyRequest, res: FastifyReply){
-        if (!req.headers.authorization){
-           return res.status(500).send({message:"Digite uma otp válida"})
-        }
-        const otp = req.headers.authorization.split(' ')[1]
+  
         const {novaSenha,email} = novaSenhaModel.parse(req.body)
 
-        await this.novaSenhaService.criarNovaSenha(email,novaSenha,otp)
+        await this.novaSenhaService.criarNovaSenha(email,novaSenha)
 
         return res.status(200).send({message:"Senha alterada com sucesso! Faça login novamente"})
     }
+    
 }
