@@ -2,7 +2,6 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { loginModel } from "../models/loginModel";
 import { redisClient } from "../plugin/redis";
 import { findUserAuth } from "../utils/findUserAuth";
-import { criarUsuarioModel } from "../models/criarUsuario";
 import usuarioSchema from "../schemas/usuarioSchema";
 import bcrypt from "bcryptjs";
 import empresaSchema from "../schemas/empresaSchema";
@@ -12,7 +11,7 @@ import { registroModel } from "../models/registroModel";
 export class AuthController {
   static async login(request: FastifyRequest, reply: FastifyReply) {
       const {email,senha} = loginModel.parse(request.body);
-
+      
       // Busca o usuário no banco de dados
       const user = await findUserAuth(email, senha);
       
@@ -27,12 +26,19 @@ export class AuthController {
         nome: user.nomeCompleto,
       });
 
-      // Armazenar sessão no Redis
+
       await redisClient.set(`user:${user.id}`, token, { EX: 3600 }).catch((error) => {
         console.error('Erro ao armazenar sessão no Redis:', error);
         return reply.status(500).send({ message: 'Erro interno do servidor' });
       });
 
+      reply.setCookie('accessToken', token, {
+        path: '/',
+        httpOnly: true,
+        secure: false, // Use secure cookies em produção
+        sameSite: "lax", // Protege contra CSRF
+        maxAge: 3600, // 1 hora
+      });
       // Retornar token para o cliente
       return reply.status(200).send({ 
         message: 'Login bem-sucedido',
@@ -45,11 +51,11 @@ export class AuthController {
   }
 
   static async logout(request: FastifyRequest, reply: FastifyReply) {
-      const authHeader = request.headers.authorization;
-      if (!authHeader) {
-        return reply.status(401).send({ message: 'Token não fornecido' });
-      }    
-      const token = authHeader.split(' ')[1];
+      const token = request.cookies.accessToken || request.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return reply.status(401).send({ message: 'Nenhum token fornecido' });
+      }
+    
 
         await redisClient.set(`blacklist:${token}`, token,{EX: 120 }).then(()=>{
           console.log('Sessão removida do Redis com sucesso');
@@ -58,6 +64,8 @@ export class AuthController {
         }).catch((error) => {
           console.error('Erro ao remover sessão do Redis:', error);}
         )
+
+        reply.clearCookie('acessToken',{path:'/'});
 
 
      
