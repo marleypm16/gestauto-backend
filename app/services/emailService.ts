@@ -1,10 +1,11 @@
 import { redisClient } from "../plugin/redis";
 import sendEmailSes from "../plugin/ses";
 import usuarioSchema from "../schemas/usuarioSchema";
+import verifyOtp from "../utils/verifyOtp";
 
 export class EmailService{
    static async  sendEmail(to: string,otp:number): Promise<void> {       
-        await redisClient.set(`otp:${to}`, otp, { EX: 300 }).catch((error) => {
+        await redisClient.set(`otp:${to}`, otp, { EX: 3000 }).catch((error) => {
             console.error('Erro ao armazenar OTP no Redis:', error);
             throw new Error('Erro ao armazenar OTP no Redis');
         })
@@ -13,8 +14,8 @@ export class EmailService{
         
     }
     static async verifyEmail(email: string, otp: number) {
-        const storedOtp = await redisClient.get(`otp:${email}`);
-        if (storedOtp && parseInt(storedOtp) === otp) {
+        const otpexists = await verifyOtp(otp.toString(),email);
+        if (otpexists) {
             const usuario = await usuarioSchema.findOne({
                 email
             })
