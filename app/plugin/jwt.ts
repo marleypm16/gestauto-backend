@@ -6,6 +6,10 @@ import { FastifyInstance } from 'fastify';
 export default fp(async function jwtPlugin(app: FastifyInstance) {
   app.register(fastifyJwt, {
     secret: process.env.JWT_SECRET || "segredo-super-forte",
+    cookie:{
+      cookieName: 'accessToken',
+      signed: true, 
+    },
     sign: {
       expiresIn: '1h'
     }
