@@ -3,13 +3,7 @@ import usuarioSchema from "../schemas/usuarioSchema";
 import bcrypt from "bcryptjs";
 
 export class NovaSenhaService{
-    async criarNovaSenha(email:string,novaSenha:string,otp:string){
-        //validar se o otp existe no redis
-        const resultado = await redisClient.get(`otp:${email}`)
-        
-        if(!resultado){
-            console.log("OTP Inválida")
-        }
+    async criarNovaSenha(email:string,novaSenha:string){
         //criptografar a nova senha
         const senhaNovaCriptografada = await bcrypt.hash(novaSenha, 12);
         //validar se o usuário existe
@@ -17,13 +11,8 @@ export class NovaSenhaService{
         if (!usuario) {
             throw new Error("Usuário não encontrado");
         }
-        //validar se a otp é do email enviado
-        if(otp!==resultado){
-            throw new Error("OTP incorreta");
-        }
+       
 
-
-        //validar se a senha atual é igual a nova senha
 
         if(bcrypt.compareSync(novaSenha, usuario.senha)){
             throw new Error("A nova senha não pode ser igual a senha atual")
