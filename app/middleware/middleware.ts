@@ -2,11 +2,12 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import verifyToken from "../utils/verifyToken";
 
 const authMiddleware = async (request:FastifyRequest, reply:FastifyReply) => {
-  
-    const authHeader = request.headers.authorization;
-    if (!authHeader) return reply.code(401).send({ error: 'Token ausente' });
+    
+    const token = request.cookies.accessToken || request.headers.authorization?.split(' ')[1]; // Use o nome correto
+    if (!token) {
+        return reply.code(401).send({ error: 'Token não fornecido' });
+    }
 
-    const token = authHeader.split(' ')[1];
     const decoded = await request.jwtVerify();
 
     const isValid = await verifyToken(token);
