@@ -2,17 +2,15 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { loginModel } from "../models/loginModel";
 import { redisClient } from "../plugin/redis";
 import { findUserAuth } from "../utils/findUserAuth";
-import usuarioSchema from "../schemas/usuarioSchema";
 import bcrypt from "bcryptjs";
-import empresaSchema from "../schemas/empresaSchema";
-import usuarioEmpresaSchema from "../schemas/usuarioEmpresaSchema";
+
 import { registroModel } from "../models/registroModel";
+import prisma from "../plugin/postgres";
 
 export class AuthController {
   static async login(request: FastifyRequest, reply: FastifyReply) {
       const {email,senha} = loginModel.parse(request.body);
       
-      // Busca o usuário no banco de dados
       const user = await findUserAuth(email, senha);
       
       if (!user) {
@@ -23,7 +21,7 @@ export class AuthController {
       const token = request.server.jwt.sign({ 
         id: user.id, 
         email: user.email,
-        nome: user.nomeCompleto,
+        nome: user.nome,
       });
 
 
@@ -75,32 +73,48 @@ export class AuthController {
   static async register(req: FastifyRequest, res: FastifyReply) {
         const {user,company} = registroModel.parse(req.body);
         const senhaCriptografada = await bcrypt.hash(user.senha, 12);
-        const existeusuarioComEmail = await usuarioSchema.findOne({email:user.email})
+        const existeusuarioComEmail = await prisma.user.findFirst({
+          where: {
+            email: user.email
+          }
+        })
         if (existeusuarioComEmail) {
             return res.status(400).send({ message: 'E-mail já cadastrado' });
         }
-        const existeEmpresaComCnpj = await usuarioSchema.findOne({ 'empresa.cnpj': company.cnpj });
+        const existeEmpresaComCnpj = await prisma.empresa.findFirst({
+          where:{
+            cnpj: company.cnpj
+          }
+        });
         
         if (existeEmpresaComCnpj) {
             return res.status(400).send({ message: 'CNPJ já cadastrado' });
         }
-       const empresaCriada = await empresaSchema.create({
-            ...company
+       const empresaCriada = await prisma.empresa.create({
+            data:company
         })
         if (!empresaCriada) {
             return res.status(500).send({ message: 'Erro ao criar empresa' });
         }
-        const usuarioCriado = await usuarioSchema.create({
+        const usuarioCriado = await prisma.user.create({
+          data:{
             ...user,
-            empresaId: empresaCriada._id,
-            senha: senhaCriptografada
+           senha : senhaCriptografada
+          }
+         
         })
         if (!usuarioCriado) {
             return res.status(500).send({ message: 'Erro ao criar usuário' });
         }
-        await usuarioEmpresaSchema.create({
-          usuarioId: usuarioCriado._id,
-          empresaId: empresaCriada._id,
+        await prisma.usuarioEmpresa.create({
+          data:{
+            userId: usuarioCriado.id,
+            empresaId: empresaCriada.id,
+            funcao: "Proprietário",
+            permisso: "admin",
+            
+          }
+       
         })
     
        
