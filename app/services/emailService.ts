@@ -1,6 +1,6 @@
+import prisma from "../plugin/postgres";
 import { redisClient } from "../plugin/redis";
 import sendEmailSes from "../plugin/ses";
-import usuarioSchema from "../schemas/usuarioSchema";
 import verifyOtp from "../utils/verifyOtp";
 
 export class EmailService{
@@ -16,22 +16,26 @@ export class EmailService{
     static async verifyEmail(email: string, otp: number) {
         const otpexists = await verifyOtp(otp.toString(),email);
         if (otpexists) {
-            const usuario = await usuarioSchema.findOne({
-                email
+            const usuario = await prisma.user.findFirst({
+                where:{
+                    email
+                }
             })
             if (!usuario) {
                 throw new Error('Usuário não encontrado');
             }
             await redisClient.del(`otp:${email}`);
-            await usuario.updateOne({
-                email,
-                $set:{
-                    emailVerificado: true
+            await prisma.user.update({
+                data:{
+                    confirmar_email: true
+                },
+                where:{
+                    id: usuario.id
                 }
             })
             return {
-                id: usuario._id,
-                nome: usuario.nomeCompleto,
+                id: usuario.id,
+                nome: usuario.nome,
                 email: usuario.email
             };
         }

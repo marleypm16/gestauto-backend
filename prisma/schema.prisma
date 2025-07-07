@@ -1,0 +1,252 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int      @id @default(autoincrement())
+  nome            String   @db.VarChar(255)
+  email           String   @unique @db.VarChar(255)
+  senha           String   @db.VarChar(255)
+  confirmar_email Boolean  @default(false)
+  ativo           Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  data_contrato   DateTime @default(now())
+
+  UsuarioEmpresa UsuarioEmpresa[]
+}
+
+model Empresa {
+  id             Int              @id @default(autoincrement())
+  razao_social   String           @db.VarChar(255)
+  cnpj           String           @unique @db.VarChar(255)
+  email          String?          @unique @db.VarChar(255)
+  telefone       String?          @db.VarChar(20)
+  cep            String           @db.VarChar(255)
+  rua            String           @db.VarChar(255)
+  numero         String           @db.VarChar(20)
+  bairro         String           @db.VarChar(255)
+  cidade         String           @db.VarChar(255)
+  uf         String           @db.VarChar(10)
+  complemento    String?          @db.VarChar(255)
+  createdAt      DateTime         @default(now())
+  ativo          Boolean          @default(true)
+  status_empresa StatusEmpresa    @default(PENDENTE)
+  UsuarioEmpresa UsuarioEmpresa[]
+  Assinatura     Assinatura[]
+  Clientes       Clientes[]
+  OrdemServico   OrdemServico[]
+  PosVenda       PosVenda[]
+}
+
+enum StatusEmpresa {
+  PENDENTE
+  ATIVA
+  INATIVA
+}
+
+model UsuarioEmpresa {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  empresaId Int
+  funcao    String?   @db.VarChar(50)
+  salario   Decimal? @db.Decimal(10, 2)
+  permisso  String?   @db.VarChar(50) // Exemplo: "admin", "user", etc.
+  createdAt DateTime @default(now())
+
+  user         User           @relation(fields: [userId], references: [id])
+  empresa      Empresa        @relation(fields: [empresaId], references: [id])
+  Clientes     Clientes[]
+  OrdemServico OrdemServico[]
+  OsServico    OsServico[]
+
+  @@unique([userId, empresaId])
+}
+
+model Plano {
+  id         Int          @id @default(autoincrement())
+  nome       String       @db.VarChar(255)
+  valor      Decimal      @db.Decimal(10, 2)
+  ativo      Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  Assinatura Assinatura[]
+}
+
+model Assinatura {
+  id         Int              @id @default(autoincrement())
+  empresaid  Int
+  planoId    Int
+  dataInicio DateTime         @default(now())
+  dataFim    DateTime?
+  status     StatusAssinatura @default(PENDENTE) // Exemplo: "ativa", "cancelada", etc.
+  createdAt  DateTime         @default(now())
+  gatewayId  String?          @db.VarChar(255) // ID do gateway de pagamento, se aplicável
+  empresa    Empresa          @relation(fields: [empresaid], references: [id])
+  plano      Plano            @relation(fields: [planoId], references: [id])
+  Fatura     Fatura[]
+}
+
+enum StatusAssinatura {
+  ATIVA
+  CANCELADA
+  PENDENTE
+}
+
+model Fatura {
+  id             Int          @id @default(autoincrement())
+  assinaturaId   Int
+  valor          Decimal      @db.Decimal(10, 2)
+  dataVencimento DateTime
+  status         StatusFatura @default(PENDENTE) // Exemplo: "paga", "pendente", etc.
+  createdAt      DateTime     @default(now())
+  transacaoId    String?      @db.VarChar(255)
+  assinatura     Assinatura   @relation(fields: [assinaturaId], references: [id])
+}
+
+enum StatusFatura {
+  PAGA
+  PENDENTE
+  ATRASADA
+}
+
+model Clientes {
+  id             Int      @id @default(autoincrement())
+  nome           String   @db.VarChar(255)
+  email          String?  @unique @db.VarChar(255)
+  telefone       String?  @db.VarChar(20)
+  empresa_id     Int
+  funcionario_id Int
+  carros         Carros[]
+  createdAt      DateTime @default(now())
+
+  empresa      Empresa        @relation(fields: [empresa_id], references: [id])
+  funcionario  UsuarioEmpresa @relation(fields: [funcionario_id], references: [id])
+  OrdemServico OrdemServico[]
+  PosVenda     PosVenda[]
+}
+
+model Carros {
+  id         Int      @id @default(autoincrement())
+  cliente_id Int
+  marca      String   @db.VarChar(255)
+  modelo     String   @db.VarChar(255)
+  ano        Int
+  placa      String   @unique @db.VarChar(20)
+  cor        String   @db.VarChar(50)
+  createdAt  DateTime @default(now())
+
+  cliente      Clientes       @relation(fields: [cliente_id], references: [id])
+  OrdemServico OrdemServico[]
+}
+
+model Produtos {
+  id          Int      @id @default(autoincrement())
+  nome        String   @db.VarChar(255)
+  descricao   String?  @db.VarChar(500)
+  preco       Decimal  @db.Decimal(10, 2)
+  estoque_id  Int
+  categoriaId Int
+  createdAt   DateTime @default(now())
+
+  estoque Estoque @relation(fields: [estoque_id], references: [id])
+
+  ProdutoEstoque ProdutoEstoque[]
+}
+
+model Estoque {
+  id             Int              @id @default(autoincrement())
+  createdAt      DateTime         @default(now())
+  nome           String           @db.VarChar(255)
+  Produtos       Produtos[]
+  ProdutoEstoque ProdutoEstoque[]
+}
+
+model ProdutoEstoque {
+  id         Int      @id @default(autoincrement())
+  produtoId  Int
+  estoqueId  Int
+  quantidade Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  produto Produtos @relation(fields: [produtoId], references: [id])
+  estoque Estoque  @relation(fields: [estoqueId], references: [id])
+}
+
+model OrdemServico {
+  id               Int                @id @default(autoincrement())
+  preco            Decimal            @db.Decimal(10, 2)
+  cliente_id       Int
+  funcionario_id   Int
+  carro_id         Int
+  empresa_id       Int
+  metodo_pagamento String             @db.VarChar(50) // Exemplo: "cartão", "dinheiro", etc.
+  status           StatusOrdemServico @default(PENDENTE) // Exemplo: "con
+  desconto         Decimal            @default(0) @db.Decimal(10, 2)
+  hora_entrada     DateTime           @default(now())
+  hora_saida       DateTime?
+  preco_total      Decimal            @default(0) @db.Decimal(10, 2)
+
+  empresa     Empresa        @relation(fields: [empresa_id], references: [id])
+  cliente     Clientes       @relation(fields: [cliente_id], references: [id])
+  funcionario UsuarioEmpresa @relation(fields: [funcionario_id], references: [id])
+  carro       Carros         @relation(fields: [carro_id], references: [id])
+  Servico     Servico?       @relation(fields: [servicoId], references: [id])
+  servicoId   Int?
+  OsServico   OsServico[]
+}
+
+enum StatusOrdemServico {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+  ATRASADA
+}
+
+model PosVenda {
+  id           Int      @id @default(autoincrement())
+  servico_id   Int
+  empresa_id   Int
+  cliente_id   Int
+  data_contato DateTime
+  status       String   @db.VarChar(50) // Exemplo: "pendente", "concluído", etc.
+
+  createdAt DateTime @default(now())
+  servico   Servico  @relation(fields: [servico_id], references: [id])
+  empresa   Empresa  @relation(fields: [empresa_id], references: [id])
+  cliente   Clientes @relation(fields: [cliente_id], references: [id])
+}
+
+model Servico {
+  id              Int      @id @default(autoincrement())
+  nome            String   @db.VarChar(255)
+  descricao       String?  @db.VarChar(500)
+  preco           Decimal  @db.Decimal(10, 2)
+  duracao         Int // Duração em minutos
+  tempo_pos_venda Int? // Tempo em dias para pós-venda
+  createdAt       DateTime @default(now())
+
+  OrdemServico OrdemServico[]
+  PosVenda     PosVenda[]
+}
+
+model OsServico {
+  id               Int @id @default(autoincrement())
+  funcionario_id   Int
+  ordem_servico_id Int
+
+  funcionario  UsuarioEmpresa @relation(fields: [funcionario_id], references: [id])
+  ordemServico OrdemServico   @relation(fields: [ordem_servico_id], references: [id])
+  createdAt    DateTime       @default(now())
+}

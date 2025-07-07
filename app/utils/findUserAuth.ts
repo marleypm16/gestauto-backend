@@ -1,7 +1,11 @@
-import usuarioSchema from "../schemas/usuarioSchema";
+import prisma from "../plugin/postgres";
 import bcrypt from "bcryptjs";
 export const findUserAuth = async (email:string,senha:string) => { 
-    const user = await usuarioSchema.findOne({email})
+    const user = await prisma.user.findFirst({
+        where:{
+            email
+        }
+    })
     .then((user) => {
         if (!user) {
             return null; 

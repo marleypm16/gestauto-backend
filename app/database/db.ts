@@ -1,17 +1,21 @@
-import mongoose from 'mongoose';
+// import connectMongoDb from '../plugin/mongodb';
+
+// const connectDB = async () => {
+//     await connectMongoDb(); 
+// }
+
+// export default connectDB;
+
+import prisma from "../plugin/postgres";
 
 const connectDB = async () => {
-    await mongoose.connect(
-        process.env.DB_URL || 'mongodb://localhost:27017/mydatabase',
-    ).then((
-        () => {
-            console.log('Banco de dados conectado com sucesso');
-        }
-    )).catch((error) => {
-        console.error('Erro ao conectar com banco de dados:', error);
-        process.exit(1); 
+  prisma.$connect()
+    .then(() => {
+      console.log("Conexão com o banco de dados PostgreSQL estabelecida com sucesso.");
+    })
+    .catch((error) => {
+      console.error("Erro ao conectar ao banco de dados PostgreSQL:", error);
     });
-  
-}
+};
 
 export default connectDB;

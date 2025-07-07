@@ -8,7 +8,11 @@
   "main": "index.ts",
   "scripts": {
     "dev": "nodemon app/server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsx ./app/plugin/postgres.ts "
+  
+
+    
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.1",
