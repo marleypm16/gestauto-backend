@@ -1,14 +1,17 @@
 import { redisClient } from "../plugin/redis";
 
-const verifyToken = async (token: string): Promise<boolean> => {
-
-    const tokenBlacklist = await redisClient.get(`blacklist:${token}`)
-    if(tokenBlacklist){
-        console.log('Token encontrado na blacklist');
-        return false;
+const verifyToken = async (token: string,userId:string): Promise<boolean> => {
+    const storedToken = await redisClient.get(`user:${userId}`)
+    console.log('Token armazenado:', storedToken);
+    console.log('Token recebido:', token);
+    console.log(token === storedToken);
+    
+    if(storedToken === token){
+        console.log('Token válido');
+        return true;
     } else{
-            console.log('Token não encontrado na blacklist');
-            return true;
+            console.log('Token inválido ');
+            return false;
         }
 
 }

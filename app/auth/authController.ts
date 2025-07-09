@@ -17,7 +17,16 @@ export class AuthController {
         return reply.status(401).send({ message: 'E-mail ou senha inválidos' });
       }
 
-      // Gerar token JWT com mais dados do usuário
+      const sessionExists = await redisClient.get(`user:${user.id}`);
+      console.log('Sessão existente:', sessionExists);
+      if(sessionExists) {
+        await redisClient.del(`user:${user.id}`).catch((error) => {
+          console.error('Erro ao remover sessão do Redis:', error);
+          return reply.status(500).send({ message: 'Erro interno do servidor' });
+        });
+        
+      }
+
       const token = request.server.jwt.sign({ 
         id: user.id, 
         email: user.email,
@@ -33,9 +42,9 @@ export class AuthController {
       reply.setCookie('accessToken', token, {
         path: '/',
         httpOnly: true,
-        secure: false, // Use secure cookies em produção
-        sameSite: "lax", // Protege contra CSRF
-        maxAge: 3600, // 1 hora
+        secure: false, 
+        sameSite: "lax", 
+        maxAge: 3600, 
       });
       // Retornar token para o cliente
       return reply.status(200).send({ 
@@ -44,6 +53,8 @@ export class AuthController {
         user: {
           id: user.id,
           email: user.email,
+          empresas: user.UsuarioEmpresa
+
         }
       });
   }

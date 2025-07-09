@@ -1,4 +1,6 @@
 /node_modules
 Dockerfile 
 .env
+.env.development
+.env.production
 /app/generated/prisma

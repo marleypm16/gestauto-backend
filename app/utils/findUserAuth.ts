@@ -4,6 +4,13 @@ export const findUserAuth = async (email:string,senha:string) => {
     const user = await prisma.user.findFirst({
         where:{
             email
+        },
+        include:{
+            UsuarioEmpresa:{
+                include:{
+                    empresa: true
+                }
+            }
         }
     })
     .then((user) => {

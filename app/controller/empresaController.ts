@@ -22,7 +22,7 @@ export class EmpresaController {
            
 
             // 2. Chama o método estático do seu serviço para buscar as empresas.
-            const empresas = await EmpresaService.getUserEmpresas(Number(userId));
+            const empresas = await EmpresaService.getUserEmpresas(userId);
 
             // 3. Envia a resposta de sucesso com o array de empresas.
             //    Se o usuário não tiver empresas, 'empresas' será um array vazio [], o que é uma resposta válida.
@@ -46,7 +46,7 @@ export class EmpresaController {
       })
       await prisma.usuarioEmpresa.create({
         data: {
-          userId: Number(userId), // Obtendo o ID do usuário autenticado
+          userId: userId, // Obtendo o ID do usuário autenticado
           empresaId: empresaCriada.id, // Supondo que o ID da empresa seja retornado após a criação
           funcao: "Proprietário",
           permisso: "admin",

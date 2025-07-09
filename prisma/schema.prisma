@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id              Int      @id @default(autoincrement())
+  id              String      @id @default(uuid())
   nome            String   @db.VarChar(255)
   email           String   @unique @db.VarChar(255)
   senha           String   @db.VarChar(255)
@@ -28,7 +28,7 @@ model User {
 }
 
 model Empresa {
-  id             Int              @id @default(autoincrement())
+  id              String      @id @default(uuid())
   razao_social   String           @db.VarChar(255)
   cnpj           String           @unique @db.VarChar(255)
   email          String?          @unique @db.VarChar(255)
@@ -57,9 +57,9 @@ enum StatusEmpresa {
 }
 
 model UsuarioEmpresa {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  empresaId Int
+  id              String      @id @default(uuid())
+  userId    String
+  empresaId String
   funcao    String?   @db.VarChar(50)
   salario   Decimal? @db.Decimal(10, 2)
   permisso  String?   @db.VarChar(50) // Exemplo: "admin", "user", etc.
@@ -75,7 +75,7 @@ model UsuarioEmpresa {
 }
 
 model Plano {
-  id         Int          @id @default(autoincrement())
+  id              String      @id @default(uuid())
   nome       String       @db.VarChar(255)
   valor      Decimal      @db.Decimal(10, 2)
   ativo      Boolean      @default(true)
@@ -84,9 +84,9 @@ model Plano {
 }
 
 model Assinatura {
-  id         Int              @id @default(autoincrement())
-  empresaid  Int
-  planoId    Int
+  id              String      @id @default(uuid())
+  empresaid  String
+  planoId    String
   dataInicio DateTime         @default(now())
   dataFim    DateTime?
   status     StatusAssinatura @default(PENDENTE) // Exemplo: "ativa", "cancelada", etc.
@@ -104,8 +104,8 @@ enum StatusAssinatura {
 }
 
 model Fatura {
-  id             Int          @id @default(autoincrement())
-  assinaturaId   Int
+  id              String      @id @default(uuid())
+  assinaturaId   String
   valor          Decimal      @db.Decimal(10, 2)
   dataVencimento DateTime
   status         StatusFatura @default(PENDENTE) // Exemplo: "paga", "pendente", etc.
@@ -121,12 +121,12 @@ enum StatusFatura {
 }
 
 model Clientes {
-  id             Int      @id @default(autoincrement())
+  id              String      @id @default(uuid())
   nome           String   @db.VarChar(255)
   email          String?  @unique @db.VarChar(255)
   telefone       String?  @db.VarChar(20)
-  empresa_id     Int
-  funcionario_id Int
+  empresa_id     String
+  funcionario_id String
   carros         Carros[]
   createdAt      DateTime @default(now())
 
@@ -137,8 +137,8 @@ model Clientes {
 }
 
 model Carros {
-  id         Int      @id @default(autoincrement())
-  cliente_id Int
+  id              String      @id @default(uuid())
+  cliente_id String
   marca      String   @db.VarChar(255)
   modelo     String   @db.VarChar(255)
   ano        Int
@@ -151,12 +151,11 @@ model Carros {
 }
 
 model Produtos {
-  id          Int      @id @default(autoincrement())
+  id              String      @id @default(uuid())
   nome        String   @db.VarChar(255)
   descricao   String?  @db.VarChar(500)
   preco       Decimal  @db.Decimal(10, 2)
-  estoque_id  Int
-  categoriaId Int
+  estoque_id  String
   createdAt   DateTime @default(now())
 
   estoque Estoque @relation(fields: [estoque_id], references: [id])
@@ -165,7 +164,7 @@ model Produtos {
 }
 
 model Estoque {
-  id             Int              @id @default(autoincrement())
+  id              String      @id @default(uuid())
   createdAt      DateTime         @default(now())
   nome           String           @db.VarChar(255)
   Produtos       Produtos[]
@@ -173,9 +172,9 @@ model Estoque {
 }
 
 model ProdutoEstoque {
-  id         Int      @id @default(autoincrement())
-  produtoId  Int
-  estoqueId  Int
+  id              String      @id @default(uuid())
+  produtoId  String
+  estoqueId  String
   quantidade Int      @default(0)
   createdAt  DateTime @default(now())
 
@@ -184,12 +183,12 @@ model ProdutoEstoque {
 }
 
 model OrdemServico {
-  id               Int                @id @default(autoincrement())
+  id              String      @id @default(uuid())
   preco            Decimal            @db.Decimal(10, 2)
-  cliente_id       Int
-  funcionario_id   Int
-  carro_id         Int
-  empresa_id       Int
+  cliente_id       String
+  funcionario_id   String
+  carro_id         String
+  empresa_id       String
   metodo_pagamento String             @db.VarChar(50) // Exemplo: "cartão", "dinheiro", etc.
   status           StatusOrdemServico @default(PENDENTE) // Exemplo: "con
   desconto         Decimal            @default(0) @db.Decimal(10, 2)
@@ -202,7 +201,7 @@ model OrdemServico {
   funcionario UsuarioEmpresa @relation(fields: [funcionario_id], references: [id])
   carro       Carros         @relation(fields: [carro_id], references: [id])
   Servico     Servico?       @relation(fields: [servicoId], references: [id])
-  servicoId   Int?
+  servicoId   String?
   OsServico   OsServico[]
 }
 
@@ -215,10 +214,10 @@ enum StatusOrdemServico {
 }
 
 model PosVenda {
-  id           Int      @id @default(autoincrement())
-  servico_id   Int
-  empresa_id   Int
-  cliente_id   Int
+  id              String      @id @default(uuid())
+  servico_id   String
+  empresa_id   String
+  cliente_id   String
   data_contato DateTime
   status       String   @db.VarChar(50) // Exemplo: "pendente", "concluído", etc.
 
@@ -229,7 +228,7 @@ model PosVenda {
 }
 
 model Servico {
-  id              Int      @id @default(autoincrement())
+  id              String      @id @default(uuid())
   nome            String   @db.VarChar(255)
   descricao       String?  @db.VarChar(500)
   preco           Decimal  @db.Decimal(10, 2)
@@ -242,9 +241,9 @@ model Servico {
 }
 
 model OsServico {
-  id               Int @id @default(autoincrement())
-  funcionario_id   Int
-  ordem_servico_id Int
+  id              String      @id @default(uuid())
+  funcionario_id   String
+  ordem_servico_id String
 
   funcionario  UsuarioEmpresa @relation(fields: [funcionario_id], references: [id])
   ordemServico OrdemServico   @relation(fields: [ordem_servico_id], references: [id])
