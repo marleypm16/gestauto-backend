@@ -80,7 +80,7 @@ export class ClientService {
             skip,
             take,
             include: {
-                carros: true // Opcional: já incluir os carros de cada cliente na resposta
+                carros: true 
             }
         }),
         prisma.clientes.count({ where })
@@ -119,16 +119,20 @@ export class ClientService {
             throw new Error("Usuário não tem permissão para criar cliente nesta empresa.");
         }
         // 2. Se a permissão for válida, cria o cliente e o associa à empresa e ao funcionário
-            const { empresa_id, ...clientData } = data;
+            const { empresa_id,carros, ...clientData } = data;
             const newClient = await prisma.clientes.create({
             data: {
                 ...clientData,
-                empresa: { // Conecta com a empresa
+                empresa: { 
                 connect: { id: empresa_id }
                 },
                 funcionario: { 
                 connect: { id: associarEmpresa.id }
+                },
+                carros:{
+                    create:carros
                 }
+                
             }
             });
 
