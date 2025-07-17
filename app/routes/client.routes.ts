@@ -1,20 +1,10 @@
 import { FastifyInstance } from "fastify";
+import { ClientController } from "../controller/clientController";
 
-const clientRoutes = (app: FastifyInstance) =>{
-    app.get('/client', async (req, res) => {
-        return { message: "Client route is working!" };
-    });
+export const clientRoutes = (app: FastifyInstance) =>{
+    app.get('/client',ClientController.getClients);
 
-    app.post('/client', async (req, res) => {
-        const data = req.body;
-        // Here you would typically handle the data, e.g., save it to a database
-        return { message: "Client data received", data };
-    });
+    app.post('/client', ClientController.createClient);
 
-    app.put('/client/:id', async (req, res) => {
-        const { id } = req.params as { id: string };
-        const data = req.body;
-        // Update logic here
-        return { message: `Client ${id} updated`, data };
-    });
+    app.put('/client/:id',ClientController.updateClient);
 }
