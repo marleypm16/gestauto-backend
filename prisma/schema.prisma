@@ -127,6 +127,7 @@ model Clientes {
   telefone       String?  @db.VarChar(20)
   empresa_id     String
   funcionario_id String
+  ativo         Boolean  @default(true)
   carros         Carros[]
   createdAt      DateTime @default(now())
 
