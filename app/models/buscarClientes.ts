@@ -4,6 +4,7 @@ export const getClientesQuerySchema = z.object({
   empresa_id: z.string().uuid("O ID da empresa é obrigatório e deve ser um UUID válido."),
 
   // Parâmetros de Filtro (opcionais)
+  busca: z.string().optional(),
   nome: z.string().optional(),
   email: z.string().optional(),
   placa: z.string().optional(),

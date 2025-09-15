@@ -12,11 +12,18 @@ export class ClientController {
         res.send(clientes);
     }
 
-    static async updateClient(req: any, res: any) {
-        const { id } = req.params;
+    static async getClientById(req: FastifyRequest, res: FastifyReply) {
+        const { id } = req.params as { id: string };
+        const userId = (req.user as { id: string }).id;
+        const client = await ClientService.getClientById(userId, id);
+        res.send(client);
+    }
+
+    static async updateClient(req: FastifyRequest, res: FastifyReply) {
+        const { id } = req.params as { id: string };
         const data = req.body;
         const updatedClient = await ClientService.updateClient(id, data);
-        res.json(updatedClient);
+        res.send(updatedClient);
     }
 
     static async createClient(req: FastifyRequest, res: FastifyReply) {
