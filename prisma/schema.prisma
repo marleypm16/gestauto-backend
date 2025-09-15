@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id              String      @id @default(uuid())
+  id              String   @id @default(uuid())
   nome            String   @db.VarChar(255)
   email           String   @unique @db.VarChar(255)
   senha           String   @db.VarChar(255)
@@ -28,7 +28,7 @@ model User {
 }
 
 model Empresa {
-  id              String      @id @default(uuid())
+  id             String           @id @default(uuid())
   razao_social   String           @db.VarChar(255)
   cnpj           String           @unique @db.VarChar(255)
   email          String?          @unique @db.VarChar(255)
@@ -38,7 +38,7 @@ model Empresa {
   numero         String           @db.VarChar(20)
   bairro         String           @db.VarChar(255)
   cidade         String           @db.VarChar(255)
-  uf         String           @db.VarChar(10)
+  uf             String           @db.VarChar(10)
   complemento    String?          @db.VarChar(255)
   createdAt      DateTime         @default(now())
   ativo          Boolean          @default(true)
@@ -57,12 +57,12 @@ enum StatusEmpresa {
 }
 
 model UsuarioEmpresa {
-  id              String      @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
   empresaId String
-  funcao    String?   @db.VarChar(50)
+  funcao    String?  @db.VarChar(50)
   salario   Decimal? @db.Decimal(10, 2)
-  permisso  String?   @db.VarChar(50) // Exemplo: "admin", "user", etc.
+  permisso  String?  @db.VarChar(50) // Exemplo: "admin", "user", etc.
   createdAt DateTime @default(now())
 
   user         User           @relation(fields: [userId], references: [id])
@@ -75,7 +75,7 @@ model UsuarioEmpresa {
 }
 
 model Plano {
-  id              String      @id @default(uuid())
+  id         String       @id @default(uuid())
   nome       String       @db.VarChar(255)
   valor      Decimal      @db.Decimal(10, 2)
   ativo      Boolean      @default(true)
@@ -84,7 +84,7 @@ model Plano {
 }
 
 model Assinatura {
-  id              String      @id @default(uuid())
+  id         String           @id @default(uuid())
   empresaid  String
   planoId    String
   dataInicio DateTime         @default(now())
@@ -104,7 +104,7 @@ enum StatusAssinatura {
 }
 
 model Fatura {
-  id              String      @id @default(uuid())
+  id             String       @id @default(uuid())
   assinaturaId   String
   valor          Decimal      @db.Decimal(10, 2)
   dataVencimento DateTime
@@ -121,13 +121,13 @@ enum StatusFatura {
 }
 
 model Clientes {
-  id              String      @id @default(uuid())
+  id             String   @id @default(uuid())
   nome           String   @db.VarChar(255)
   email          String?  @unique @db.VarChar(255)
   telefone       String?  @db.VarChar(20)
   empresa_id     String
   funcionario_id String
-  ativo         Boolean  @default(true)
+  ativo          Boolean  @default(true)
   carros         Carros[]
   createdAt      DateTime @default(now())
 
@@ -138,7 +138,7 @@ model Clientes {
 }
 
 model Carros {
-  id              String      @id @default(uuid())
+  id         String   @id @default(uuid())
   cliente_id String
   marca      String   @db.VarChar(255)
   modelo     String   @db.VarChar(255)
@@ -152,20 +152,21 @@ model Carros {
 }
 
 model Produtos {
-  id              String      @id @default(uuid())
-  nome        String   @db.VarChar(255)
-  descricao   String?  @db.VarChar(500)
-  preco       Decimal  @db.Decimal(10, 2)
-  estoque_id  String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  nome       String   @db.VarChar(255)
+  descricao  String?  @db.VarChar(500)
+  preco      Decimal  @db.Decimal(10, 2)
+  estoque_id String
+  createdAt  DateTime @default(now())
 
   estoque Estoque @relation(fields: [estoque_id], references: [id])
 
   ProdutoEstoque ProdutoEstoque[]
+  ItemVenda      ItemVenda[]
 }
 
 model Estoque {
-  id              String      @id @default(uuid())
+  id             String           @id @default(uuid())
   createdAt      DateTime         @default(now())
   nome           String           @db.VarChar(255)
   Produtos       Produtos[]
@@ -173,7 +174,7 @@ model Estoque {
 }
 
 model ProdutoEstoque {
-  id              String      @id @default(uuid())
+  id         String   @id @default(uuid())
   produtoId  String
   estoqueId  String
   quantidade Int      @default(0)
@@ -181,10 +182,11 @@ model ProdutoEstoque {
 
   produto Produtos @relation(fields: [produtoId], references: [id])
   estoque Estoque  @relation(fields: [estoqueId], references: [id])
+  @@unique([produtoId, estoqueId])
 }
 
 model OrdemServico {
-  id              String      @id @default(uuid())
+  id               String             @id @default(uuid())
   preco            Decimal            @db.Decimal(10, 2)
   cliente_id       String
   funcionario_id   String
@@ -201,9 +203,25 @@ model OrdemServico {
   cliente     Clientes       @relation(fields: [cliente_id], references: [id])
   funcionario UsuarioEmpresa @relation(fields: [funcionario_id], references: [id])
   carro       Carros         @relation(fields: [carro_id], references: [id])
+  OsServico   OsServico[]
+  ItemVenda   ItemVenda[]
   Servico     Servico?       @relation(fields: [servicoId], references: [id])
   servicoId   String?
-  OsServico   OsServico[]
+}
+
+model ItemVenda {
+  id               String   @id @default(uuid())
+  ordem_servico_id String
+  produto_id       String
+  quantidade       Int      @default(1)
+  preco_unitario   Decimal  @db.Decimal(10, 2)
+  preco_total      Decimal  @db.Decimal(10, 2)
+  createdAt        DateTime @default(now())
+  servicoId        String?
+
+  ordemServico OrdemServico @relation(fields: [ordem_servico_id], references: [id])
+  produto      Produtos     @relation(fields: [produto_id], references: [id])
+  servico      Servico?     @relation(fields: [servicoId], references: [id])
 }
 
 enum StatusOrdemServico {
@@ -215,7 +233,7 @@ enum StatusOrdemServico {
 }
 
 model PosVenda {
-  id              String      @id @default(uuid())
+  id           String   @id @default(uuid())
   servico_id   String
   empresa_id   String
   cliente_id   String
@@ -229,20 +247,28 @@ model PosVenda {
 }
 
 model Servico {
-  id              String      @id @default(uuid())
-  nome            String   @db.VarChar(255)
-  descricao       String?  @db.VarChar(500)
-  preco           Decimal  @db.Decimal(10, 2)
-  duracao         Int // Duração em minutos
-  tempo_pos_venda Int? // Tempo em dias para pós-venda
-  createdAt       DateTime @default(now())
+  id              String    @id @default(uuid())
+  nome            String    @db.VarChar(255)
+  descricao       String?   @db.VarChar(500)
+  preco           Decimal   @db.Decimal(10, 2)
+  duracao         Int       // Duração em minutos
+  tempo_pos_venda Int?      // Tempo em dias para pós-venda
+  passoAPasso     String?   @db.Text // Passo a passo detalhado do serviço
+  ativo           Boolean   @default(true)
+  criadoEm        DateTime  @default(now())
+  atualizadoEm    DateTime  @updatedAt
+  deletadoEm      DateTime?
 
   OrdemServico OrdemServico[]
   PosVenda     PosVenda[]
+  ItemVenda    ItemVenda[]
+
+  @@index([ativo])
+  @@index([deletadoEm])
 }
 
 model OsServico {
-  id              String      @id @default(uuid())
+  id               String @id @default(uuid())
   funcionario_id   String
   ordem_servico_id String
 
