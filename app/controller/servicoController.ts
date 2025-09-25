@@ -1,14 +1,62 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { ServicoService, CreateServicoData, UpdateServicoData } from '../services/servicoService';
+import prisma from '../plugin/postgres';
+import { validateEmpresaAccess } from '../utils/pathEmpresaValidation';
 
 const servicoService = new ServicoService();
 
 export class ServicoController {
+
+    // ✅ EXEMPLO COM PATH PARAMETER - Aplicar este padrão nas outras rotas
     async criarServico(request: FastifyRequest, reply: FastifyReply) {
         try {
+            const { empresaId } = request.params as {  empresaId: string };
+            
+            
+                  ;
+                   const userId = (request.user as { id: string }).id;
+                  // Validar acesso à empresa
+                        if (!userId) {
+                            return reply.code(401).send({
+                                success: false,
+                                message: "Token de autenticação inválido"
+                            });
+                        }
+            
+                  
+                  const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+                  if (!hasAccess) return; // Resposta já foi enviada
             const data = request.body as CreateServicoData;
             
-            // Validações básicas
+            // Validar se usuário tem acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+            // Validar se o usuário tem acesso à empresa do path
+            const usuarioEmpresa = await prisma.usuarioEmpresa.findFirst({
+                where: {
+                    userId,
+                    empresaId
+                },
+                include: {
+                    empresa: {
+                        select: { ativo: true }
+                    }
+                }
+            });
+
+            if (!usuarioEmpresa || !usuarioEmpresa.empresa.ativo) {
+                return reply.code(403).send({
+                    success: false,
+                    message: "Acesso negado a esta empresa ou empresa inativa"
+                });
+            }
+
+            // Validações do serviço
             if (!data.nome || !data.preco || !data.duracao) {
                 return reply.code(400).send({
                     success: false,
@@ -30,12 +78,16 @@ export class ServicoController {
                 });
             }
 
-            const servico = await servicoService.criarServico(data);
-            
+            // Criar serviço com empresaId do path
+            const novoServico = await servicoService.criarServico({
+                ...data,
+                empresa_id: empresaId
+            });
+
             return reply.code(201).send({
                 success: true,
                 message: "Serviço criado com sucesso",
-                data: servico
+                data: novoServico
             });
         } catch (error: any) {
             return reply.code(400).send({
@@ -44,10 +96,49 @@ export class ServicoController {
             });
         }
     }
+    
 
     async buscarTodosServicos(request: FastifyRequest, reply: FastifyReply) {
         try {
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
             const query = request.query as any;
+
+            // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+            const usuarioEmpresa = await prisma.usuarioEmpresa.findFirst({
+                where: { userId, empresaId },
+                include: { empresa: { select: { ativo: true } } }
+            });
+
+            if (!usuarioEmpresa || !usuarioEmpresa.empresa.ativo) {
+                return reply.code(403).send({
+                    success: false,
+                    message: "Acesso negado a esta empresa"
+                });
+            }
+
+            // Resto da lógica igual, mas usando empresaId do path
             const page = parseInt(query.page) || 1;
             const limit = parseInt(query.limit) || 10;
             
@@ -60,13 +151,12 @@ export class ServicoController {
                 ordenarPor: query.ordenarPor as 'nome' | 'preco' | 'maisUtilizados' | 'maisLucrativos' | 'recentes',
                 ordem: query.ordem as 'asc' | 'desc'
             };
-
-                        // TODO: Pegar empresaId do usuário autenticado (implementar middleware de auth)
-            const empresaId = "temp-empresa-id"; // Temporário até implementar auth
+            
             const resultado = await servicoService.buscarTodosServicos(empresaId, page, limit, filtros);
 
             return reply.code(200).send({
                 success: true,
+                message: "Serviços encontrados com sucesso",
                 data: resultado
             });
         } catch (error: any) {
@@ -77,10 +167,28 @@ export class ServicoController {
         }
     }
 
+   
+
     async buscarServicoPorId(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const { id } = request.params as { id: string };
-            const servico = await servicoService.buscarServicoPorId(id);
+            const { id,empresaId } = request.params as { id: string, empresaId: string };
+          
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+            const servico = await servicoService.buscarServicoPorId(id,empresaId);
             
             return reply.code(200).send({
                 success: true,
@@ -97,7 +205,30 @@ export class ServicoController {
     async atualizarServico(request: FastifyRequest, reply: FastifyReply) {
         try {
             const { id } = request.params as { id: string };
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
             const data = request.body as UpdateServicoData;
+
+            if (!empresaId) {
+                return reply.code(400).send({
+                    success: false,
+                    message: "ID da empresa é obrigatório"
+                });
+            }
 
             // Validações
             if (data.preco !== undefined && data.preco <= 0) {
@@ -114,7 +245,7 @@ export class ServicoController {
                 });
             }
 
-            const servico = await servicoService.atualizarServico(id, data);
+            const servico = await servicoService.atualizarServico(id, data, empresaId);
             
             return reply.code(200).send({
                 success: true,
@@ -132,7 +263,30 @@ export class ServicoController {
     async deletarServico(request: FastifyRequest, reply: FastifyReply) {
         try {
             const { id } = request.params as { id: string };
-            const resultado = await servicoService.deletarServico(id);
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+            if (!empresaId) {
+                return reply.code(400).send({
+                    success: false,
+                    message: "ID da empresa é obrigatório"
+                });
+            }
+
+            const resultado = await servicoService.deletarServico(id, empresaId);
             
             return reply.code(200).send({
                 success: true,
@@ -149,7 +303,30 @@ export class ServicoController {
     async buscarServicosPorPassoAPasso(request: FastifyRequest, reply: FastifyReply) {
         try {
             const { busca } = request.params as { busca: string };
-            const servicos = await servicoService.buscarServicosPorPassoAPasso(busca);
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+            if (!empresaId) {
+                return reply.code(400).send({
+                    success: false,
+                    message: "ID da empresa é obrigatório"
+                });
+            }
+
+            const servicos = await servicoService.buscarServicosPorPassoAPasso(busca, empresaId);
             
             return reply.code(200).send({
                 success: true,
@@ -165,7 +342,31 @@ export class ServicoController {
 
     async buscarServicosAtivos(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const servicos = await servicoService.buscarServicosAtivos();
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+
+            if (!empresaId) {
+                return reply.code(400).send({
+                    success: false,
+                    message: "ID da empresa é obrigatório"
+                });
+            }
+
+            const servicos = await servicoService.buscarServicosAtivos(empresaId);
             
             return reply.code(200).send({
                 success: true,
@@ -183,6 +384,29 @@ export class ServicoController {
         try {
             const { id } = request.params as { id: string };
             const { ativo } = request.body as { ativo: boolean };
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+
+            if (!empresaId) {
+                return reply.code(400).send({
+                    success: false,
+                    message: "ID da empresa é obrigatório"
+                });
+            }
 
             if (typeof ativo !== 'boolean') {
                 return reply.code(400).send({
@@ -191,7 +415,7 @@ export class ServicoController {
                 });
             }
 
-            const resultado = await servicoService.ativarDesativarServico(id, ativo);
+            const resultado = await servicoService.ativarDesativarServico(id, ativo, empresaId);
             
             return reply.code(200).send({
                 success: true,
@@ -208,7 +432,31 @@ export class ServicoController {
 
     async obterEstatisticasServicos(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const estatisticas = await servicoService.obterEstatisticasServicos();
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+
+            if (!empresaId) {
+                return reply.code(400).send({
+                    success: false,
+                    message: "ID da empresa é obrigatório"
+                });
+            }
+
+            const estatisticas = await servicoService.obterEstatisticasServicos(empresaId);
             
             return reply.code(200).send({
                 success: true,
@@ -226,6 +474,14 @@ export class ServicoController {
         try {
             const { id } = request.params as { id: string };
             const { novoNome } = request.body as { novoNome: string };
+            const { empresaId } = request.params as { empresaId: string };
+
+            if (!empresaId) {
+                return reply.code(400).send({
+                    success: false,
+                    message: "ID da empresa é obrigatório"
+                });
+            }
 
             if (!novoNome) {
                 return reply.code(400).send({
@@ -234,7 +490,7 @@ export class ServicoController {
                 });
             }
 
-            const novoServico = await servicoService.duplicarServico(id, novoNome);
+            const novoServico = await servicoService.duplicarServico(id, novoNome, empresaId);
             
             return reply.code(201).send({
                 success: true,
@@ -251,6 +507,22 @@ export class ServicoController {
 
     async buscarServicosPopulares(request: FastifyRequest, reply: FastifyReply) {
         try {
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
             const query = request.query as any;
             const limite = parseInt(query.limite) || 10;
 
@@ -270,6 +542,22 @@ export class ServicoController {
 
     async buscarServicosMaisUtilizados(request: FastifyRequest, reply: FastifyReply) {
         try {
+            const { empresaId } = request.params as { empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
             const query = request.query as any;
             const page = parseInt(query.page) || 1;
             const limit = parseInt(query.limit) || 10;
@@ -280,7 +568,6 @@ export class ServicoController {
                 ativo: true // Apenas serviços ativos
             };
 
-            const empresaId = "temp-empresa-id"; // TODO: Implementar após auth
             const resultado = await servicoService.buscarTodosServicos(empresaId, page, limit, filtros);
             
             return reply.code(200).send({
@@ -308,7 +595,22 @@ export class ServicoController {
                 ativo: true // Apenas serviços ativos
             };
 
-            const empresaId = "temp-empresa-id"; // TODO: Implementar após auth
+            const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
             const resultado = await servicoService.buscarTodosServicos(empresaId, page, limit, filtros);
             
             return reply.code(200).send({
@@ -330,7 +632,22 @@ export class ServicoController {
             const limite = parseInt(query.limite) || 10;
             const tipo = query.tipo || 'utilizados'; // 'utilizados' ou 'lucrativos'
 
-            const empresaId = "temp-empresa-id"; // TODO: Implementar após auth
+           const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
             
             let resultado;
             if (tipo === 'lucrativos') {

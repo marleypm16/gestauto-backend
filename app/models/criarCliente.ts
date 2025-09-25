@@ -4,6 +4,7 @@ export const criarClienteModel = z.object({
     nome: z.string().min(1, "O nome é obrigatório"),
     email: z.string().email("O email deve ser válido").optional(),
     telefone: z.string().optional(), 
+    ativo: z.boolean().default(true),
     carros: z.array(z.object({
         modelo: z.string().min(1, "O modelo do carro é obrigatório"),
         placa: z.string().min(1, "A placa do carro é obrigatória"),

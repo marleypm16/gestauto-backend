@@ -6,6 +6,7 @@ const criarCarroModel = z.object({
     ano: z.number().int().min(1886, "O ano do carro deve ser um número válido").max(new Date().getFullYear(), "O ano do carro não pode ser no futuro"),
     marca: z.string().min(1, "A marca do carro é obrigatória"),
     cor: z.string(),
+    
 })
 
 export default criarCarroModel;

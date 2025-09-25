@@ -48,6 +48,9 @@ model Empresa {
   Clientes       Clientes[]
   OrdemServico   OrdemServico[]
   PosVenda       PosVenda[]
+  Produtos       Produtos[]
+  Estoque        Estoque[]
+  Servico        Servico[]
 }
 
 enum StatusEmpresa {
@@ -68,6 +71,7 @@ model UsuarioEmpresa {
   user         User           @relation(fields: [userId], references: [id])
   empresa      Empresa        @relation(fields: [empresaId], references: [id])
   Clientes     Clientes[]
+  Carros       Carros[]
   OrdemServico OrdemServico[]
   OsServico    OsServico[]
 
@@ -140,6 +144,7 @@ model Clientes {
 model Carros {
   id         String   @id @default(uuid())
   cliente_id String
+  funcionario_id String
   marca      String   @db.VarChar(255)
   modelo     String   @db.VarChar(255)
   ano        Int
@@ -148,6 +153,7 @@ model Carros {
   createdAt  DateTime @default(now())
 
   cliente      Clientes       @relation(fields: [cliente_id], references: [id])
+  funcionario  UsuarioEmpresa  @relation(fields: [funcionario_id], references: [id])
   OrdemServico OrdemServico[]
 }
 
@@ -157,9 +163,11 @@ model Produtos {
   descricao  String?  @db.VarChar(500)
   preco      Decimal  @db.Decimal(10, 2)
   estoque_id String
+  empresa_id String
   createdAt  DateTime @default(now())
 
   estoque Estoque @relation(fields: [estoque_id], references: [id])
+  empresa Empresa @relation(fields: [empresa_id], references: [id])
 
   ProdutoEstoque ProdutoEstoque[]
   ItemVenda      ItemVenda[]
@@ -169,8 +177,10 @@ model Estoque {
   id             String           @id @default(uuid())
   createdAt      DateTime         @default(now())
   nome           String           @db.VarChar(255)
+  empresa_id     String
   Produtos       Produtos[]
   ProdutoEstoque ProdutoEstoque[]
+  empresa        Empresa          @relation(fields: [empresa_id], references: [id])
 }
 
 model ProdutoEstoque {
@@ -212,7 +222,7 @@ model OrdemServico {
 model ItemVenda {
   id               String   @id @default(uuid())
   ordem_servico_id String
-  produto_id       String
+  produto_id       String?
   quantidade       Int      @default(1)
   preco_unitario   Decimal  @db.Decimal(10, 2)
   preco_total      Decimal  @db.Decimal(10, 2)
@@ -220,7 +230,7 @@ model ItemVenda {
   servicoId        String?
 
   ordemServico OrdemServico @relation(fields: [ordem_servico_id], references: [id])
-  produto      Produtos     @relation(fields: [produto_id], references: [id])
+  produto      Produtos?     @relation(fields: [produto_id], references: [id])
   servico      Servico?     @relation(fields: [servicoId], references: [id])
 }
 
@@ -254,11 +264,13 @@ model Servico {
   duracao         Int       // Duração em minutos
   tempo_pos_venda Int?      // Tempo em dias para pós-venda
   passoAPasso     String?   @db.Text // Passo a passo detalhado do serviço
+  empresa_id      String
   ativo           Boolean   @default(true)
   criadoEm        DateTime  @default(now())
   atualizadoEm    DateTime  @updatedAt
   deletadoEm      DateTime?
 
+  empresa      Empresa        @relation(fields: [empresa_id], references: [id])
   OrdemServico OrdemServico[]
   PosVenda     PosVenda[]
   ItemVenda    ItemVenda[]

@@ -14,6 +14,8 @@ export interface CriarProdutoData {
   descricao?: string;
   preco: number;
   estoque_id: string;
+  quantidade?: number;
+  empresa_id: string;
 }
 
 export interface AtualizarProdutoData {
@@ -45,20 +47,24 @@ export interface ProdutoComEstoque extends Produtos {
 
 class ProdutoService {
   async criarProduto(data: CriarProdutoData): Promise<Produtos> {
-    // Verificar se o estoque existe
-    const estoqueExiste = await prisma.estoque.findUnique({
-      where: { id: data.estoque_id }
+    // Verificar se o estoque existe e pertence à empresa
+    const estoqueExiste = await prisma.estoque.findFirst({
+      where: { 
+        id: data.estoque_id,
+        empresa_id: data.empresa_id 
+      }
     });
 
     if (!estoqueExiste) {
-      throw new Error('Estoque não encontrado');
+      throw new Error('Estoque não encontrado ou você não tem permissão para acessá-lo');
     }
 
     // Verificar se já existe produto com mesmo nome no mesmo estoque
     const produtoExistente = await prisma.produtos.findFirst({
       where: {
         nome: data.nome,
-        estoque_id: data.estoque_id
+        estoque_id: data.estoque_id,
+        empresa_id: data.empresa_id
       }
     });
 
@@ -71,16 +77,16 @@ class ProdutoService {
         nome: data.nome,
         descricao: data.descricao,
         preco: data.preco,
-        estoque_id: data.estoque_id
+        estoque_id: data.estoque_id,
+        empresa_id: data.empresa_id
       }
     });
 
-    // Criar entrada inicial no controle de estoque
     await prisma.produtoEstoque.create({
       data: {
         produtoId: produto.id,
         estoqueId: data.estoque_id,
-        quantidade: 0
+        quantidade: data.quantidade || 0
       }
     });
 
@@ -89,7 +95,8 @@ class ProdutoService {
 
   async buscarTodosProdutos(
     filtros: FiltrosProduto = {},
-    paginacao: PaginacaoParams = {}
+    paginacao: PaginacaoParams = {},
+    empresaId: string
   ): Promise<{
     produtos: ProdutoComEstoque[];
     total: number;
@@ -99,7 +106,9 @@ class ProdutoService {
     const { page = 1, limit = 10 } = paginacao;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = {
+      empresa_id: empresaId
+    };
 
     if (filtros.nome) {
       where.nome = {
@@ -166,9 +175,12 @@ class ProdutoService {
     };
   }
 
-  async buscarProdutoPorId(id: string): Promise<ProdutoComEstoque | null> {
-    const produto = await prisma.produtos.findUnique({
-      where: { id },
+  async buscarProdutoPorId(id: string, empresaId: string): Promise<ProdutoComEstoque | null> {
+    const produto = await prisma.produtos.findFirst({
+      where: { 
+        id,
+        empresa_id: empresaId 
+      },
       include: {
         estoque: {
           select: {
@@ -197,14 +209,17 @@ class ProdutoService {
     };
   }
 
-  async atualizarProduto(id: string, data: AtualizarProdutoData): Promise<Produtos> {
-    // Verificar se o produto existe
-    const produtoExiste = await prisma.produtos.findUnique({
-      where: { id }
+  async atualizarProduto(id: string, data: AtualizarProdutoData, empresaId: string): Promise<Produtos> {
+    // Verificar se o produto existe e pertence à empresa
+    const produtoExiste = await prisma.produtos.findFirst({
+      where: { 
+        id,
+        empresa_id: empresaId 
+      }
     });
 
     if (!produtoExiste) {
-      throw new Error('Produto não encontrado');
+      throw new Error('Produto não encontrado ou você não tem permissão para atualizá-lo');
     }
 
     // Se está mudando o estoque, verificar se existe
@@ -239,14 +254,17 @@ class ProdutoService {
     });
   }
 
-  async excluirProduto(id: string): Promise<void> {
-    // Verificar se o produto existe
-    const produto = await prisma.produtos.findUnique({
-      where: { id }
+  async excluirProduto(id: string, empresaId: string): Promise<void> {
+    // Verificar se o produto existe e pertence à empresa
+    const produto = await prisma.produtos.findFirst({
+      where: { 
+        id,
+        empresa_id: empresaId 
+      }
     });
 
     if (!produto) {
-      throw new Error('Produto não encontrado');
+      throw new Error('Produto não encontrado ou você não tem permissão para excluí-lo');
     }
 
     // Verificar se o produto tem vendas associadas
@@ -269,9 +287,12 @@ class ProdutoService {
     });
   }
 
-  async buscarProdutosPorEstoque(estoqueId: string): Promise<ProdutoComEstoque[]> {
+  async buscarProdutosPorEstoque(estoqueId: string, empresaId: string): Promise<ProdutoComEstoque[]> {
     const produtos = await prisma.produtos.findMany({
-      where: { estoque_id: estoqueId },
+      where: { 
+        estoque_id: estoqueId,
+        empresa_id: empresaId 
+      },
       include: {
         estoque: {
           select: {
@@ -302,23 +323,30 @@ class ProdutoService {
   async atualizarQuantidadeEstoque(
     produtoId: string, 
     estoqueId: string, 
-    novaQuantidade: number
+    novaQuantidade: number,
+    empresaId: string
   ): Promise<void> {
-    // Verificar se o produto e estoque existem
-    const produto = await prisma.produtos.findUnique({
-      where: { id: produtoId }
+    // Verificar se o produto e estoque existem e pertencem à empresa
+    const produto = await prisma.produtos.findFirst({
+      where: { 
+        id: produtoId,
+        empresa_id: empresaId 
+      }
     });
 
     if (!produto) {
-      throw new Error('Produto não encontrado');
+      throw new Error('Produto não encontrado ou você não tem permissão para acessá-lo');
     }
 
-    const estoque = await prisma.estoque.findUnique({
-      where: { id: estoqueId }
+    const estoque = await prisma.estoque.findFirst({
+      where: { 
+        id: estoqueId,
+        empresa_id: empresaId 
+      }
     });
 
     if (!estoque) {
-      throw new Error('Estoque não encontrado');
+      throw new Error('Estoque não encontrado ou você não tem permissão para acessá-lo');
     }
 
     if (novaQuantidade < 0) {
@@ -342,9 +370,11 @@ class ProdutoService {
         quantidade: novaQuantidade
       }
     });
+
+    return
   }
 
-  async obterEstatisticasProdutos(): Promise<{
+  async obterEstatisticasProdutos(empresaId: string): Promise<{
     totalProdutos: number;
     produtosMaisVendidos: Array<{
       produto: ProdutoComEstoque;
@@ -354,8 +384,12 @@ class ProdutoService {
     produtosSemEstoque: ProdutoComEstoque[];
     ticketMedioProdutos: number;
   }> {
-    // Total de produtos
-    const totalProdutos = await prisma.produtos.count();
+    // Total de produtos da empresa
+    const totalProdutos = await prisma.produtos.count({
+      where: {
+        empresa_id: empresaId
+      }
+    });
 
     // Produtos mais vendidos (últimos 30 dias)
     const dataLimite = new Date();
@@ -366,6 +400,9 @@ class ProdutoService {
       where: {
         createdAt: {
           gte: dataLimite
+        },
+        produto: {
+          empresa_id: empresaId
         }
       },
       _sum: {
@@ -382,7 +419,7 @@ class ProdutoService {
 
     const produtosMaisVendidos = await Promise.all(
       vendas.map(async (venda: any) => {
-        const produto = await this.buscarProdutoPorId(venda.produto_id);
+        const produto = await this.buscarProdutoPorId(venda.produto_id, empresaId);
         return {
           produto: produto!,
           totalVendido: venda._sum.quantidade || 0,
@@ -391,9 +428,10 @@ class ProdutoService {
       })
     );
 
-    // Produtos sem estoque
+    // Produtos sem estoque da empresa
     const produtosSemEstoque = await prisma.produtos.findMany({
       where: {
+        empresa_id: empresaId,
         ProdutoEstoque: {
           every: {
             quantidade: 0
@@ -423,8 +461,13 @@ class ProdutoService {
       }))
     );
 
-    // Ticket médio dos produtos
+    // Ticket médio dos produtos da empresa
     const ticketMedio = await prisma.itemVenda.aggregate({
+      where: {
+        produto: {
+          empresa_id: empresaId
+        }
+      },
       _avg: {
         preco_unitario: true
       }

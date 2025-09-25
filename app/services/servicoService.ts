@@ -8,6 +8,9 @@ export interface CreateServicoData {
     tempoPosvenda?: number; // em dias
     passoAPasso?: string; // Passo a passo detalhado
     ativo?: boolean;
+    empresa_id: string;
+    produtoId?: string; // ID do produto associado, se houver
+    quantidade?: number; // Quantidade do produto associado, se houver
 }
 
 export interface UpdateServicoData {
@@ -22,10 +25,11 @@ export interface UpdateServicoData {
 
 export class ServicoService {
     async criarServico(data: CreateServicoData) {
-        // Verificar se já existe um serviço com o mesmo nome
+        // Verificar se já existe um serviço com o mesmo nome na mesma empresa
         const servicoExistente = await prisma.servico.findFirst({
             where: { 
                 nome: data.nome,
+                empresa_id: data.empresa_id,
                 deletadoEm: null
             }
         });
@@ -42,7 +46,8 @@ export class ServicoService {
                 duracao: data.duracao,
                 tempo_pos_venda: data.tempoPosvenda,
                 passoAPasso: data.passoAPasso,
-                ativo: data.ativo ?? true
+                ativo: data.ativo ?? true,
+                empresa_id: data.empresa_id
             }
         });
 
@@ -62,7 +67,7 @@ export class ServicoService {
         
         const where: any = {
             deletadoEm: null,
-            empresaId
+            empresa_id: empresaId
         };
 
         if (filtros) {
@@ -198,10 +203,11 @@ export class ServicoService {
         };
     }
 
-    async buscarServicoPorId(id: string) {
+    async buscarServicoPorId(id: string, empresaId: string) {
         const servico = await prisma.servico.findFirst({
             where: { 
                 id,
+                empresa_id: empresaId,
                 deletadoEm: null
             }
         });
@@ -213,14 +219,15 @@ export class ServicoService {
         return servico;
     }
 
-    async atualizarServico(id: string, data: UpdateServicoData) {
-        const servicoExistente = await this.buscarServicoPorId(id);
+    async atualizarServico(id: string, data: UpdateServicoData, empresaId: string) {
+        const servicoExistente = await this.buscarServicoPorId(id, empresaId);
 
-        // Verificar se o nome não está sendo usado por outro serviço
+        // Verificar se o nome não está sendo usado por outro serviço na mesma empresa
         if (data.nome && data.nome !== servicoExistente.nome) {
             const outroServico = await prisma.servico.findFirst({
                 where: { 
                     nome: data.nome,
+                    empresa_id: empresaId,
                     id: { not: id },
                     deletadoEm: null
                 }
@@ -248,8 +255,8 @@ export class ServicoService {
         return servico;
     }
 
-    async deletarServico(id: string) {
-        const servicoExistente = await this.buscarServicoPorId(id);
+    async deletarServico(id: string, empresaId: string) {
+        const servicoExistente = await this.buscarServicoPorId(id, empresaId);
 
         // Verificar se o serviço está sendo usado em ordens de serviço
         const ordemServicoComServico = await prisma.ordemServico.findFirst({
@@ -275,9 +282,10 @@ export class ServicoService {
         return { message: "Serviço deletado com sucesso" };
     }
 
-    async buscarServicosPorPassoAPasso(busca: string) {
+    async buscarServicosPorPassoAPasso(busca: string, empresaId: string) {
         const servicos = await prisma.servico.findMany({
             where: {
+                empresa_id: empresaId,
                 passoAPasso: {
                     contains: busca,
                     mode: 'insensitive'
@@ -291,9 +299,10 @@ export class ServicoService {
         return servicos;
     }
 
-    async buscarServicosAtivos() {
+    async buscarServicosAtivos(empresaId: string) {
         const servicos = await prisma.servico.findMany({
             where: {
+                empresa_id: empresaId,
                 ativo: true,
                 deletadoEm: null
             },
@@ -303,8 +312,8 @@ export class ServicoService {
         return servicos;
     }
 
-    async ativarDesativarServico(id: string, ativo: boolean) {
-        const servicoExistente = await this.buscarServicoPorId(id);
+    async ativarDesativarServico(id: string, ativo: boolean, empresaId: string) {
+        const servicoExistente = await this.buscarServicoPorId(id, empresaId);
 
         const servico = await prisma.servico.update({
             where: { id },
@@ -320,7 +329,7 @@ export class ServicoService {
         };
     }
 
-    async obterEstatisticasServicos() {
+    async obterEstatisticasServicos(empresaId: string) {
         const [
             totalServicos,
             servicosAtivos,
@@ -330,24 +339,44 @@ export class ServicoService {
             servicosComPassoAPasso
         ] = await Promise.all([
             prisma.servico.count({
-                where: { deletadoEm: null }
+                where: { 
+                    empresa_id: empresaId,
+                    deletadoEm: null 
+                }
             }),
             prisma.servico.count({
-                where: { ativo: true, deletadoEm: null }
+                where: { 
+                    empresa_id: empresaId,
+                    ativo: true, 
+                    deletadoEm: null 
+                }
             }),
             prisma.servico.count({
-                where: { ativo: false, deletadoEm: null }
+                where: { 
+                    empresa_id: empresaId,
+                    ativo: false, 
+                    deletadoEm: null 
+                }
             }),
             prisma.servico.findFirst({
-                where: { ativo: true, deletadoEm: null },
+                where: { 
+                    empresa_id: empresaId,
+                    ativo: true, 
+                    deletadoEm: null 
+                },
                 orderBy: { preco: 'desc' }
             }),
             prisma.servico.findFirst({
-                where: { ativo: true, deletadoEm: null },
+                where: { 
+                    empresa_id: empresaId,
+                    ativo: true, 
+                    deletadoEm: null 
+                },
                 orderBy: { preco: 'asc' }
             }),
             prisma.servico.count({
                 where: { 
+                    empresa_id: empresaId,
                     ativo: true, 
                     deletadoEm: null,
                     passoAPasso: { not: null }
@@ -365,13 +394,14 @@ export class ServicoService {
         };
     }
 
-    async duplicarServico(id: string, novoNome: string) {
-        const servicoOriginal = await this.buscarServicoPorId(id);
+    async duplicarServico(id: string, novoNome: string, empresaId: string) {
+        const servicoOriginal = await this.buscarServicoPorId(id, empresaId);
 
-        // Verificar se o novo nome não existe
+        // Verificar se o novo nome não existe na mesma empresa
         const servicoExistente = await prisma.servico.findFirst({
             where: { 
                 nome: novoNome,
+                empresa_id: empresaId,
                 deletadoEm: null
             }
         });
@@ -388,7 +418,8 @@ export class ServicoService {
                 duracao: servicoOriginal.duracao,
                 tempo_pos_venda: servicoOriginal.tempo_pos_venda,
                 passoAPasso: servicoOriginal.passoAPasso,
-                ativo: true
+                ativo: true,
+                empresa_id: empresaId
             }
         });
 

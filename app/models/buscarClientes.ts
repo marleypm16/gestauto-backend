@@ -1,7 +1,7 @@
 import { z } from "zod";
 export const getClientesQuerySchema = z.object({
   // Parâmetro da empresa é obrigatório para saber de qual empresa listar os clientes
-  empresa_id: z.string().uuid("O ID da empresa é obrigatório e deve ser um UUID válido."),
+
 
   // Parâmetros de Filtro (opcionais)
   busca: z.string().optional(),

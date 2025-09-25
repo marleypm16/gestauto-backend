@@ -1,12 +1,29 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import produtoService, { CriarProdutoData, AtualizarProdutoData, FiltrosProduto, PaginacaoParams } from '../services/produtoService';
+import { validateEmpresaAccess } from '../utils/pathEmpresaValidation';
 
 class ProdutoController {
+  
   async criarProduto(request: FastifyRequest, reply: FastifyReply) {
     try {
       const data = request.body as CriarProdutoData;
-      const { nome, descricao, preco, estoque_id } = data;
+      const { nome, descricao, preco, estoque_id, quantidade } = data;
+const { empresaId } = request.params as {  empresaId: string };
 
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
       // Validações básicas
       if (!nome || nome.trim().length === 0) {
         return reply.status(400).send({
@@ -29,11 +46,20 @@ class ProdutoController {
         });
       }
 
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
+        });
+      }
+
       const produto = await produtoService.criarProduto({
         nome: nome.trim(),
         descricao: descricao?.trim(),
         preco: Number(preco),
-        estoque_id
+        estoque_id,
+        empresa_id: empresaId,
+        quantidade: quantidade || 0
       });
 
       reply.status(201).send({
@@ -58,8 +84,31 @@ class ProdutoController {
         precoMin,
         precoMax,
         page = 1,
-        limit = 10
+        limit = 10,
+        
       } = query;
+const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
+        });
+      }
 
       const filtros: FiltrosProduto = {};
       
@@ -72,8 +121,7 @@ class ProdutoController {
         page: Number(page),
         limit: Number(limit)
       };
-
-      const resultado = await produtoService.buscarTodosProdutos(filtros, paginacao);
+      const resultado = await produtoService.buscarTodosProdutos(filtros, paginacao, empresaId);
 
       reply.send({
         success: true,
@@ -91,7 +139,24 @@ class ProdutoController {
   async buscarProdutoPorId(request: FastifyRequest, reply: FastifyReply) {
     try {
       const params = request.params as any;
+      const query = request.query as any;
       const { id } = params;
+      const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
 
       if (!id) {
         return reply.status(400).send({
@@ -100,7 +165,13 @@ class ProdutoController {
         });
       }
 
-      const produto = await produtoService.buscarProdutoPorId(id);
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
+        });
+      }
+      const produto = await produtoService.buscarProdutoPorId(id, empresaId);
 
       if (!produto) {
         return reply.status(404).send({
@@ -127,11 +198,34 @@ class ProdutoController {
       const params = request.params as any;
       const { id } = params;
       const dados = request.body as AtualizarProdutoData;
+      const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
 
       if (!id) {
         return reply.status(400).send({
           success: false,
           message: 'ID do produto é obrigatório'
+        });
+      }
+
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
         });
       }
 
@@ -156,8 +250,7 @@ class ProdutoController {
       if (dados.descricao !== undefined) dadosLimpos.descricao = dados.descricao?.trim();
       if (dados.preco !== undefined) dadosLimpos.preco = Number(dados.preco);
       if (dados.estoque_id) dadosLimpos.estoque_id = dados.estoque_id;
-
-      const produto = await produtoService.atualizarProduto(id, dadosLimpos);
+      const produto = await produtoService.atualizarProduto(id, dadosLimpos, empresaId);
 
       reply.send({
         success: true,
@@ -175,7 +268,23 @@ class ProdutoController {
   async excluirProduto(request: FastifyRequest, reply: FastifyReply) {
     try {
       const params = request.params as any;
-      const { id } = params;
+      const { id } = params
+      const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada;
 
       if (!id) {
         return reply.status(400).send({
@@ -184,7 +293,13 @@ class ProdutoController {
         });
       }
 
-      await produtoService.excluirProduto(id);
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
+        });
+      }
+      await produtoService.excluirProduto(id, empresaId);
 
       reply.send({
         success: true,
@@ -202,7 +317,22 @@ class ProdutoController {
     try {
       const params = request.params as any;
       const { estoqueId } = params;
+const { empresaId } = request.params as {  empresaId: string };
 
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
       if (!estoqueId) {
         return reply.status(400).send({
           success: false,
@@ -210,7 +340,13 @@ class ProdutoController {
         });
       }
 
-      const produtos = await produtoService.buscarProdutosPorEstoque(estoqueId);
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
+        });
+      }
+      const produtos = await produtoService.buscarProdutosPorEstoque(estoqueId, empresaId);
 
       reply.send({
         success: true,
@@ -231,6 +367,22 @@ class ProdutoController {
       const body = request.body as any;
       const { id: produtoId, estoqueId } = params;
       const { quantidade } = body;
+      const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
 
       if (!produtoId) {
         return reply.status(400).send({
@@ -246,18 +398,25 @@ class ProdutoController {
         });
       }
 
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
+        });
+      }
+
       if (quantidade === undefined || quantidade < 0) {
         return reply.status(400).send({
           success: false,
           message: 'Quantidade deve ser um número não negativo'
         });
       }
-
-      await produtoService.atualizarQuantidadeEstoque(produtoId, estoqueId, Number(quantidade));
+      await produtoService.atualizarQuantidadeEstoque(produtoId, estoqueId, Number(quantidade), empresaId);
 
       reply.send({
         success: true,
-        message: 'Quantidade do estoque atualizada com sucesso'
+        message: 'Quantidade do estoque atualizada com sucesso',
+        data: quantidade
       });
     } catch (error: any) {
       reply.status(400).send({
@@ -269,7 +428,30 @@ class ProdutoController {
 
   async obterEstatisticasProdutos(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const estatisticas = await produtoService.obterEstatisticasProdutos();
+     const { empresaId } = request.params as {  empresaId: string };
+
+
+      ;
+       const userId = (request.user as { id: string }).id;
+      // Validar acesso à empresa
+            if (!userId) {
+                return reply.code(401).send({
+                    success: false,
+                    message: "Token de autenticação inválido"
+                });
+            }
+
+      
+      const hasAccess = await validateEmpresaAccess(request, reply, empresaId);
+      if (!hasAccess) return; // Resposta já foi enviada
+
+      if (!empresaId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'ID da empresa é obrigatório'
+        });
+      }
+      const estatisticas = await produtoService.obterEstatisticasProdutos(empresaId);
 
       reply.send({
         success: true,
